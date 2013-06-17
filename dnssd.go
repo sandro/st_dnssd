@@ -5,11 +5,22 @@ package main
 #include <errno.h>
 #include <stdlib.h>
 #include <dns_sd.h>
-extern void serviceRegister();
+extern void serviceRegister(
+    uint32_t interfaceIndex,
+    char *name,
+    char *registrationType,
+    char *domain,
+    char *host,
+    uint16_t port,
+    uint16_t textLength,
+    char *textRecord,
+    void *context
+  );
 */
 import "C"
 import (
   "fmt"
+  "unsafe"
 )
 
 type Service struct {
@@ -36,7 +47,15 @@ func (r *Registration) aCallback() {
 }
 
 func (r *Registration) registerService() {
-  C.serviceRegister()
+  name := C.CString(r.name)
+  registrationType := C.CString(r.name)
+  name := C.CString(r.name)
+  name := C.CString(r.name)
+  defer C.free(unsafe.Pointer(name))
+  C.serviceRegister(
+    C.uint32_t(r.interfaceIndex),
+    name,
+  )
 }
 
 //export goRegistrationCallback
@@ -50,6 +69,7 @@ func register() {
   r.registerService()
 
   fmt.Println("length", r.textRecordLength())
+  select {}
 }
 
 func main() {
