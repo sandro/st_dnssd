@@ -1,8 +1,20 @@
 #include "_cgo_export.h"
 
-void serviceRegisterCallback() {
-  printf("in c callback\n");
-  goRegistrationCallback();
+void serviceRegisterCallback(
+  DNSServiceRef service,
+  DNSServiceFlags flags,
+  DNSServiceErrorType errorCode,
+  const char *name,
+  const char *registrationType,
+  const char *domain,
+  void *context
+) {
+  puts("in register callback");
+}
+
+DNSServiceRegisterReply serviceRegisterCallbackShim() {
+  puts("in shim callback");
+  return serviceRegisterCallback;
 }
 
 void serviceRegister(

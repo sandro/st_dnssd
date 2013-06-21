@@ -5,17 +5,7 @@ package main
 #include <errno.h>
 #include <stdlib.h>
 #include <dns_sd.h>
-extern void serviceRegister(
-    uint32_t interfaceIndex,
-    char *name,
-    char *registrationType,
-    char *domain,
-    char *host,
-    uint16_t port,
-    uint16_t textLength,
-    char *textRecord,
-    void *context
-  );
+#include "callback.h"
 */
 import "C"
 import (
@@ -47,15 +37,48 @@ func (r *Registration) aCallback() {
 }
 
 func (r *Registration) registerService() {
+  /* var service *C.DNSServiceRef */
+  var flags C.DNSServiceFlags = 0
+
   name := C.CString(r.name)
-  registrationType := C.CString(r.name)
-  name := C.CString(r.name)
-  name := C.CString(r.name)
+  registrationType := C.CString(r.registrationType)
+  domain := C.CString(r.domain)
+  host := C.CString(r.host)
+  textRecord := C.CString(r.textRecord)
   defer C.free(unsafe.Pointer(name))
+  defer C.free(unsafe.Pointer(registrationType))
+  defer C.free(unsafe.Pointer(domain))
+  defer C.free(unsafe.Pointer(host))
+  defer C.free(unsafe.Pointer(textRecord))
+
+  fmt.Println(r.registrationType, flags, r.interfaceIndex, r.port);
   C.serviceRegister(
     C.uint32_t(r.interfaceIndex),
     name,
+    registrationType,
+    domain,
+    host,
+    C.uint16_t(r.port),
+    C.uint16_t(r.textRecordLength()),
+    textRecord,
+    nil,
   )
+  /* errorCode := C.DNSServiceRegister( */
+  /*   service, */
+  /*   flags, */
+  /*   C.uint32_t(0), */
+  /*   name, */
+  /*   registrationType, */
+  /*   domain, */
+  /*   host, */
+  /*   C.uint16_t(56565), */
+  /*   C.uint16_t(0), */
+  /*   nil, */
+  /*   C.serviceRegisterCallbackShim(), */
+  /*   nil, */
+  /* ) */
+
+  /* fmt.Println("Registration done:", errorCode); */
 }
 
 //export goRegistrationCallback
@@ -65,7 +88,7 @@ func goRegistrationCallback() {
 
 func register() {
   fmt.Println("registering")
-  r := Registration{textRecord: "hi"}
+  r := Registration{registrationType: "_go._tcp", port: 56565}
   r.registerService()
 
   fmt.Println("length", r.textRecordLength())
