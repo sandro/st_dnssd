@@ -42,7 +42,7 @@ void serviceRegister(
   /* DNSServiceRegisterReply callback; */
   /* void *context = NULL; */
   DNSServiceErrorType registerError;
-  registerError = DNSServiceRegister(&service, flags, interfaceIndex, name, registrationType, domain, host, port, textLength, textRecord, serviceRegisterCallback, context);
+  registerError = DNSServiceRegister(&service, flags, interfaceIndex, name, registrationType, domain, host, port, textLength, textRecord, serviceRegisterCallbackShim(), context);
   printf("%s %d err\n", registrationType, registerError);
   if (registerError == kDNSServiceErr_NoError) {
     printf("no error\n");

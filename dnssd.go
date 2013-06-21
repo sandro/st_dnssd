@@ -37,7 +37,7 @@ func (r *Registration) aCallback() {
 }
 
 func (r *Registration) registerService() {
-  /* var service *C.DNSServiceRef */
+  var service C.DNSServiceRef
   var flags C.DNSServiceFlags = 0
 
   name := C.CString(r.name)
@@ -52,7 +52,20 @@ func (r *Registration) registerService() {
   defer C.free(unsafe.Pointer(textRecord))
 
   fmt.Println(r.registrationType, flags, r.interfaceIndex, r.port);
-  C.serviceRegister(
+  /* C.serviceRegister( */
+  /*   C.uint32_t(r.interfaceIndex), */
+  /*   name, */
+  /*   registrationType, */
+  /*   domain, */
+  /*   host, */
+  /*   C.uint16_t(r.port), */
+  /*   C.uint16_t(r.textRecordLength()), */
+  /*   textRecord, */
+  /*   nil, */
+  /* ) */
+  errorCode := C.DNSServiceRegister(
+    &service,
+    flags,
     C.uint32_t(r.interfaceIndex),
     name,
     registrationType,
@@ -60,25 +73,18 @@ func (r *Registration) registerService() {
     host,
     C.uint16_t(r.port),
     C.uint16_t(r.textRecordLength()),
-    textRecord,
+    nil,
+    C.serviceRegisterCallbackShim(),
     nil,
   )
-  /* errorCode := C.DNSServiceRegister( */
-  /*   service, */
-  /*   flags, */
-  /*   C.uint32_t(0), */
-  /*   name, */
-  /*   registrationType, */
-  /*   domain, */
-  /*   host, */
-  /*   C.uint16_t(56565), */
-  /*   C.uint16_t(0), */
-  /*   nil, */
-  /*   C.serviceRegisterCallbackShim(), */
-  /*   nil, */
-  /* ) */
 
-  /* fmt.Println("Registration done:", errorCode); */
+  fmt.Println("Registration done:", errorCode);
+
+  if errorCode == C.kDNSServiceErr_NoError {
+    errorCode = C.DNSServiceProcessResult(service)
+    fmt.Println("process", errorCode);
+  }
+
 }
 
 //export goRegistrationCallback
