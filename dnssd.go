@@ -64,7 +64,7 @@ func (r *Registration) registerService() {
     C.uint16_t(r.textRecordLength()),
     nil,
     C.serviceRegisterCallbackShim(),
-    nil,
+    unsafe.Pointer(r),
   )
 
   fmt.Println("Registration done:", errorCode);
@@ -77,8 +77,9 @@ func (r *Registration) registerService() {
 }
 
 //export goRegistrationCallback
-func goRegistrationCallback() {
-  fmt.Println("GO REGISTER CALLBACK");
+func goRegistrationCallback(pfoo unsafe.Pointer) {
+  foo := *(*Registration)(pfoo)
+  fmt.Println("GO REGISTER CALLBACK", foo.registrationType);
 }
 
 func register() {
