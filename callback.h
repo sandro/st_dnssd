@@ -9,15 +9,3 @@ extern void serviceRegisterCallback(
 );
 
 extern DNSServiceRegisterReply serviceRegisterCallbackShim();
-
-void serviceRegister(
-  uint32_t interfaceIndex,
-  char *name,
-  char *registrationType,
-  char *domain,
-  char *host,
-  uint16_t port,
-  uint16_t textLength,
-  char *textRecord,
-  void *context
-);

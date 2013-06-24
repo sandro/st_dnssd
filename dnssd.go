@@ -52,17 +52,6 @@ func (r *Registration) registerService() {
   defer C.free(unsafe.Pointer(textRecord))
 
   fmt.Println(r.registrationType, flags, r.interfaceIndex, r.port);
-  /* C.serviceRegister( */
-  /*   C.uint32_t(r.interfaceIndex), */
-  /*   name, */
-  /*   registrationType, */
-  /*   domain, */
-  /*   host, */
-  /*   C.uint16_t(r.port), */
-  /*   C.uint16_t(r.textRecordLength()), */
-  /*   textRecord, */
-  /*   nil, */
-  /* ) */
   errorCode := C.DNSServiceRegister(
     &service,
     flags,
