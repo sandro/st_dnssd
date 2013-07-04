@@ -9,8 +9,16 @@ void serviceRegisterCallback(
   const char *domain,
   void *context
 ) {
-  printf("in register callback, %d\n", ((int)context));
-  goRegistrationCallback(context);
+  printf("in register callback, %p\n", &context);
+  goRegistrationCallback(
+    service,
+    flags,
+    errorCode,
+    name,
+    registrationType,
+    domain,
+    context
+  );
 }
 
 DNSServiceRegisterReply serviceRegisterCallbackShim() {

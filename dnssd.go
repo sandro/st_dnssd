@@ -77,9 +77,20 @@ func (r *Registration) registerService() {
 }
 
 //export goRegistrationCallback
-func goRegistrationCallback(pfoo unsafe.Pointer) {
+func goRegistrationCallback(
+  service C.DNSServiceRef,
+  flags C.DNSServiceFlags,
+  errorCode C.DNSServiceErrorType,
+  name_p *C.char,
+  registrationType_p *C.char,
+  domain_p *C.char,
+  pfoo unsafe.Pointer,
+) {
+  name := C.GoString(name_p)
+  registrationType := C.GoString(registrationType_p)
+  domain := C.GoString(domain_p)
   foo := *(*Registration)(pfoo)
-  fmt.Println("GO REGISTER CALLBACK", foo.registrationType);
+  fmt.Println("GO REGISTER CALLBACK", foo.registrationType, service, flags, errorCode, name, registrationType, domain);
 }
 
 func register() {
