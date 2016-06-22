@@ -1,0 +1,2 @@
+dns-sd -R foo _go._tcp local. 1234
+dns-sd -B _go._tcp
