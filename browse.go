@@ -1,4 +1,4 @@
-package dnssd
+package st_dnssd
 
 /*
 #include <stdio.h>
@@ -21,12 +21,22 @@ type Browser struct {
 	InterfaceIndex   int
 	RegistrationType string
 	Domain           string
+	Callback         func()
 }
 
-//export GoBrowseCallback
-func GoBrowseCallback(browser unsafe.Pointer) {
-	b1 := *(*Browser)(browser)
-	fmt.Println("in go with browser", browser, b1)
+//export goBrowseCallback
+func goBrowseCallback(
+	service C.DNSServiceRef,
+	flags C.DNSServiceFlags,
+	ifIndex C.int,
+	errorCode C.DNSServiceErrorType,
+	serviceName *C.char,
+	registrationType *C.char,
+	replyDomain *C.char,
+	pBrowser unsafe.Pointer,
+) {
+	browser := *(*Browser)(pBrowser)
+	browser.Callback()
 }
 
 func (o *Browser) Browse() {
@@ -44,7 +54,7 @@ func (o *Browser) Browse() {
 		C.uint32_t(o.InterfaceIndex),
 		registrationType,
 		nil,
-		(C.DNSServiceBrowseReply)(C.bCallback),
+		(C.DNSServiceBrowseReply)(C.browseCallback),
 		unsafe.Pointer(o),
 	)
 	fmt.Println("Browse done. error code:", errorCode)

@@ -1,6 +1,6 @@
 #include "_cgo_export.h"
 
-void serviceRegisterCallback(
+void registrationCallback(
   DNSServiceRef service,
   DNSServiceFlags flags,
   DNSServiceErrorType errorCode,
@@ -21,27 +21,25 @@ void serviceRegisterCallback(
   );
 }
 
-DNSServiceRegisterReply serviceRegisterCallbackShim() {
-  puts("in shim callback");
-  return serviceRegisterCallback;
-}
-
-void MyClBk() {
-  printf("in C callback, \n");
-}
-
-DNSServiceBrowseReply bCallback(
+void browseCallback(
   void                  *sdRef,
   uint32_t              flags,
   uint32_t              ifIndex,
   DNSServiceErrorType   errorCode,
   void                  *serviceName,
-  void                  *regtype,
+  void                  *regType,
   void                  *replyDomain,
   void                  *context
 ) {
-  printf("in bCallback, \n");
-  GoBrowseCallback(context);
+  printf("in browse Callback, \n");
+  goBrowseCallback(
+    sdRef,
+    flags,
+    ifIndex,
+    errorCode,
+    serviceName,
+    regType,
+    replyDomain,
+    context
+  );
 }
-
-/* DNSServiceBrowseReply BrowseCallback = (DNSServiceBrowseReply) bCallback; */

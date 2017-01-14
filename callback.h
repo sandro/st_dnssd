@@ -1,4 +1,4 @@
-extern void serviceRegisterCallback(
+extern void registrationCallback(
   DNSServiceRef service,
   DNSServiceFlags flags,
   DNSServiceErrorType errorCode,
@@ -8,19 +8,13 @@ extern void serviceRegisterCallback(
   void *context
 );
 
-extern DNSServiceRegisterReply serviceRegisterCallbackShim();
-
-extern DNSServiceBrowseReply bCallback(
+extern void browseCallback(
   void                  *sdRef,
   uint32_t              flags,
   uint32_t              ifIndex,
   DNSServiceErrorType   errorCode,
   void                  *serviceName,
-  void                  *regtype,
+  void                  *regType,
   void                  *replyDomain,
   void                  *context
 );
-
-/* DNSServiceBrowseReply BrowseCallback; */
-
-extern void MyClBk();
