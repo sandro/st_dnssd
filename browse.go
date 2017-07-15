@@ -10,25 +10,47 @@ package st_dnssd
 import "C"
 import (
 	"fmt"
-	"io"
-	"os"
 	"unsafe"
 )
 
 type Browser struct {
 	Service          C.DNSServiceRef
-	Flags            int
 	InterfaceIndex   int
 	RegistrationType string
 	Domain           string
-	Callback         func()
+	Callback         func(BrowserCallbackArgs)
+}
+
+type BrowserCallbackArgs struct {
+	FlagAnalyzer
+	service          C.DNSServiceRef
+	IfIndex          uint32
+	ErrorCode        C.DNSServiceErrorType
+	ServiceName      string
+	RegistrationType string
+	ReplyDomain      string
+	Browser          Browser
+}
+
+type FlagAnalyzer struct {
+	flags C.DNSServiceFlags
+}
+
+func (o *FlagAnalyzer) FlagIsMoreComing() bool {
+	return o.flags&C.kDNSServiceFlagsMoreComing == C.kDNSServiceFlagsMoreComing
+}
+func (o *FlagAnalyzer) FlagIsAdd() bool {
+	return o.flags&C.kDNSServiceFlagsAdd == C.kDNSServiceFlagsAdd
+}
+func (o *FlagAnalyzer) FlagIsRemove() bool {
+	return !o.FlagIsAdd()
 }
 
 //export goBrowseCallback
 func goBrowseCallback(
 	service C.DNSServiceRef,
 	flags C.DNSServiceFlags,
-	ifIndex C.int,
+	ifIndex C.uint32_t,
 	errorCode C.DNSServiceErrorType,
 	serviceName *C.char,
 	registrationType *C.char,
@@ -36,7 +58,19 @@ func goBrowseCallback(
 	pBrowser unsafe.Pointer,
 ) {
 	browser := *(*Browser)(pBrowser)
-	browser.Callback()
+	callbackArgs := BrowserCallbackArgs{
+		service:   service,
+		IfIndex:   uint32(ifIndex),
+		ErrorCode: errorCode,
+		Browser:   browser,
+	}
+	callbackArgs.FlagAnalyzer.flags = flags
+	if errorCode == C.kDNSServiceErr_NoError {
+		callbackArgs.ServiceName = C.GoString(serviceName)
+		callbackArgs.RegistrationType = C.GoString(registrationType)
+		callbackArgs.ReplyDomain = C.GoString(replyDomain)
+	}
+	browser.Callback(callbackArgs)
 }
 
 func (o *Browser) Browse() {
@@ -54,30 +88,32 @@ func (o *Browser) Browse() {
 		C.uint32_t(o.InterfaceIndex),
 		registrationType,
 		nil,
-		(C.DNSServiceBrowseReply)(C.browseCallback),
+		C.DNSServiceBrowseReply(C.browseCallback),
 		unsafe.Pointer(o),
 	)
 	fmt.Println("Browse done. error code:", errorCode)
 
 	if errorCode == C.kDNSServiceErr_NoError {
-		fd := C.DNSServiceRefSockFD(unsafe.Pointer(o.Service))
-		fmt.Println("FD", fd)
+		// srv := unsafe.Pointer(o.Service)
+		// fd := C.DNSServiceRefSockFD(C.DNSServiceRef(srv))
+		// fmt.Println("FD", fd)
 		// file, err := os.OpenFile("file", os.O_RDWR, os.ModePerm)
-		file := os.NewFile(uintptr(fd), "dnssd_fd")
-		fmt.Println(file)
+		// file := os.NewFile(uintptr(fd), "dnssd_fd")
+		// fmt.Println(file)
 		go func() {
-			bb := make([]byte, 100)
+			// bb := make([]byte, 100)
 			fmt.Println("entering loop")
 			for {
-				n, err := file.Read(bb)
-				if n == 0 && err == io.EOF {
-					fmt.Println("EOF")
-				} else {
-					fmt.Println(string(bb))
-				}
+				fmt.Println("in loop")
+				// n, err := file.Read(bb)
+				// if n == 0 && err == io.EOF {
+				// 	fmt.Println("EOF")
+				// } else {
+				// fmt.Println("printing", string(bb))
+				errorCode = C.DNSServiceProcessResult(o.Service)
+				fmt.Println("process", errorCode)
+				// }
 			}
-			errorCode = C.DNSServiceProcessResult(o.Service)
-			fmt.Println("process", errorCode)
 		}()
 	}
 }

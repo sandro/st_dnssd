@@ -9,7 +9,6 @@ void registrationCallback(
   char *domain,
   void *context
 ) {
-  printf("in register callback, %p\n", &context);
   goRegistrationCallback(
     service,
     flags,
@@ -31,7 +30,6 @@ void browseCallback(
   void                  *replyDomain,
   void                  *context
 ) {
-  printf("in browse Callback, \n");
   goBrowseCallback(
     sdRef,
     flags,
@@ -40,6 +38,32 @@ void browseCallback(
     serviceName,
     regType,
     replyDomain,
+    context
+  );
+}
+
+void resolveReplyCallback(
+  void                  *sdRef,
+  uint32_t              flags,
+  uint32_t              ifIndex,
+  DNSServiceErrorType   errorCode,
+  char *fullName,
+  char *hostTarget,
+  uint16_t port,
+  uint16_t txtLen,
+  char *txtRecord,
+  void *context
+) {
+  goResolveReplyCallback(
+    sdRef,
+    flags,
+    ifIndex,
+    errorCode,
+    fullName,
+    hostTarget,
+    port,
+    txtLen,
+    txtRecord,
     context
   );
 }

@@ -18,3 +18,16 @@ extern void browseCallback(
   void                  *replyDomain,
   void                  *context
 );
+
+extern void resolveReplyCallback(
+  void                  *sdRef,
+  uint32_t              flags,
+  uint32_t              ifIndex,
+  DNSServiceErrorType   errorCode,
+  char *fullName,
+  char *hostTarget,
+  uint16_t port,
+  uint16_t txtLen,
+  char *txtRecord,
+  void *context
+);
