@@ -12,6 +12,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"log"
 	"unsafe"
 )
 
@@ -36,6 +37,9 @@ func Resolve(ifIndex uint32, name, regType, domain string, callback func(Resolve
 	defer C.free(unsafe.Pointer(cRegType))
 	cDomain := C.CString(domain)
 	defer C.free(unsafe.Pointer(cDomain))
+
+	stateIndex := callbackState.Add(callback)
+
 	errorCode := C.DNSServiceResolve(
 		&service,
 		flags,
@@ -44,7 +48,7 @@ func Resolve(ifIndex uint32, name, regType, domain string, callback func(Resolve
 		cRegType,
 		cDomain,
 		C.DNSServiceResolveReply(C.resolveReplyCallback),
-		unsafe.Pointer(&callback),
+		unsafe.Pointer(&stateIndex),
 	)
 	if errorCode == C.kDNSServiceErr_NoError {
 		go func() {
@@ -58,11 +62,12 @@ func Resolve(ifIndex uint32, name, regType, domain string, callback func(Resolve
 
 func parseTextRecord(textLength C.uint16_t, textRecord *C.char) map[string]string {
 	pairs := make(map[string]string, 0)
-	if textLength == 0 {
+	if textLength == 1 {
 		return pairs
 	}
 	stream := C.GoBytes(unsafe.Pointer(textRecord), C.int(textLength))
 	buffer := bytes.NewBuffer(stream)
+	log.Println("parseTextRecord", textLength, string(stream))
 	for {
 		len, err := buffer.ReadByte()
 		if err == io.EOF {
@@ -87,7 +92,7 @@ func goResolveReplyCallback(
 	port C.uint16_t,
 	textLength C.uint16_t,
 	textRecord *C.char,
-	pCallback unsafe.Pointer,
+	pstateIndex unsafe.Pointer,
 ) {
 	pairs := parseTextRecord(textLength, textRecord)
 	fmt.Println("pairs is", pairs)
@@ -101,6 +106,8 @@ func goResolveReplyCallback(
 	}
 	fmt.Println("resolve reply flags", flags)
 	args.FlagAnalyzer.flags = flags
-	callback := *(*func(ResolveReplyArgs))(pCallback)
+	stateIndex := *(*int)(pstateIndex)
+	// callback := *(*func(ResolveReplyArgs))(pCallback)
+	callback := callbackState.Get(stateIndex).(func(ResolveReplyArgs))
 	callback(args)
 }

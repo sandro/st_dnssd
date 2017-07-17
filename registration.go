@@ -9,16 +9,29 @@ package st_dnssd
 */
 import "C"
 import (
+	"errors"
 	"fmt"
+	"log"
 	"unsafe"
 )
+
+type RegistrationCallbackArgs struct {
+	FlagAnalyzer
+	service          C.DNSServiceRef
+	flags            C.DNSServiceFlags
+	ErrorCode        int
+	Name             string
+	RegistrationType string
+	Domain           string
+	Registration     *Registration
+}
 
 // Registration can be used to register a service
 type Registration struct {
 	// Service          C.DNSServiceRef
 	flags            uint32
 	interfaceIndex   int
-	name             string
+	Name             string
 	RegistrationType string
 	domain           string
 	host             string
@@ -32,22 +45,11 @@ type Z struct {
 	ff  func(RegistrationCallbackArgs)
 }
 
-type RegistrationCallbackArgs struct {
-	FlagAnalyzer
-	service          C.DNSServiceRef
-	flags            C.DNSServiceFlags
-	errorCode        C.DNSServiceErrorType
-	name             string
-	registrationType string
-	domain           string
-	Registration     Registration
-}
-
 // RegisterService advertises a dnssd service
-func (r *Registration) RegisterService(textRecords []string) {
+func (r *Registration) RegisterService(textRecords []string) error {
 	var flags C.DNSServiceFlags
 
-	name := C.CString(r.name)
+	name := C.CString(r.Name)
 	defer C.free(unsafe.Pointer(name))
 	registrationType := C.CString(r.RegistrationType)
 	defer C.free(unsafe.Pointer(registrationType))
@@ -56,6 +58,7 @@ func (r *Registration) RegisterService(textRecords []string) {
 	host := C.CString(r.host)
 	defer C.free(unsafe.Pointer(host))
 	textRecord := makeTextRecord(textRecords)
+	log.Println("length of textRecord", len(textRecord), C.uint16_t(len(textRecord)))
 	// var vv bytes.Buffer
 	// vv.WriteByte(3)
 	// vv.Write([]byte("a=b"))
@@ -72,6 +75,14 @@ func (r *Registration) RegisterService(textRecords []string) {
 	// fmt.Println(vv)
 	// vv = append(vv, []byte("a=b")...)
 	var service C.DNSServiceRef
+	var txtPtr unsafe.Pointer
+	if len(textRecord) > 0 {
+		txtPtr = unsafe.Pointer(&textRecord[0])
+	} else {
+		txtPtr = nil
+	}
+	fmt.Printf("%#v\n", txtPtr)
+	stateIndex := callbackState.Add(r)
 	errorCode := C.DNSServiceRegister(
 		&service,
 		flags,
@@ -83,26 +94,34 @@ func (r *Registration) RegisterService(textRecords []string) {
 		C.uint16_t(r.Port),
 		// C.uint16_t(r.textRecordLength()),
 		C.uint16_t(len(textRecord)),
-		unsafe.Pointer(&textRecord[0]),
+		txtPtr,
 		// 0,
 		// nil,
 		C.DNSServiceRegisterReply(C.registrationCallback),
 		// unsafe.Pointer(&Z{hh: "string", ary: &[]string{"one"}, ff: func(args RegistrationCallbackArgs) { fmt.Println("ff") }}),
-		unsafe.Pointer(r),
+		unsafe.Pointer(&stateIndex),
 		// nil,
 	)
 
-	fmt.Println("Registration done:", errorCode)
+	log.Println("Registration done:", errorCode)
 
 	if errorCode == C.kDNSServiceErr_NoError {
-		errorCode = C.DNSServiceProcessResult(service)
-		fmt.Println("process", errorCode)
+		go func() {
+			for {
+				errorCode = C.DNSServiceProcessResult(service)
+				fmt.Println("registration process", errorCode)
+			}
+		}()
+		return nil
 	}
+	return errors.New("unknown error")
 
 }
 
 func makeTextRecord(texts []string) []byte {
+	log.Println("makeTextRecord for", texts)
 	if len(texts) == 0 {
+		log.Println("noTextRecord returning nil")
 		return nil
 	}
 	textRecord := make([]byte, 0)
@@ -132,19 +151,21 @@ func goRegistrationCallback(
 	name_p *C.char,
 	registrationType_p *C.char,
 	domain_p *C.char,
-	pRegistration unsafe.Pointer,
+	pstateIndex unsafe.Pointer,
 ) {
-	registration := *(*Registration)(pRegistration)
+	stateIndex := *(*int)(pstateIndex)
+	// var registration *Registration
+	registration := callbackState.Get(stateIndex).(*Registration)
 	callbackArgs := RegistrationCallbackArgs{
 		service:      service,
-		errorCode:    errorCode,
+		ErrorCode:    int(errorCode),
 		Registration: registration,
 	}
 	callbackArgs.FlagAnalyzer.flags = flags
 	if errorCode == C.kDNSServiceErr_NoError {
-		callbackArgs.name = C.GoString(name_p)
-		callbackArgs.registrationType = C.GoString(registrationType_p)
-		callbackArgs.domain = C.GoString(domain_p)
+		callbackArgs.Name = C.GoString(name_p)
+		callbackArgs.RegistrationType = C.GoString(registrationType_p)
+		callbackArgs.Domain = C.GoString(domain_p)
 	}
 	registration.Callback(callbackArgs)
 }

@@ -9,7 +9,8 @@ package st_dnssd
 */
 import "C"
 import (
-	"fmt"
+	"errors"
+	"log"
 	"unsafe"
 )
 
@@ -28,8 +29,8 @@ type BrowserCallbackArgs struct {
 	ErrorCode        C.DNSServiceErrorType
 	ServiceName      string
 	RegistrationType string
-	ReplyDomain      string
-	Browser          Browser
+	Domain           string
+	Browser          *Browser
 }
 
 type FlagAnalyzer struct {
@@ -55,9 +56,10 @@ func goBrowseCallback(
 	serviceName *C.char,
 	registrationType *C.char,
 	replyDomain *C.char,
-	pBrowser unsafe.Pointer,
+	pstateIndex unsafe.Pointer,
 ) {
-	browser := *(*Browser)(pBrowser)
+	stateIndex := *(*int)(pstateIndex)
+	browser := callbackState.Get(stateIndex).(*Browser)
 	callbackArgs := BrowserCallbackArgs{
 		service:   service,
 		IfIndex:   uint32(ifIndex),
@@ -68,12 +70,12 @@ func goBrowseCallback(
 	if errorCode == C.kDNSServiceErr_NoError {
 		callbackArgs.ServiceName = C.GoString(serviceName)
 		callbackArgs.RegistrationType = C.GoString(registrationType)
-		callbackArgs.ReplyDomain = C.GoString(replyDomain)
+		callbackArgs.Domain = C.GoString(replyDomain)
 	}
 	browser.Callback(callbackArgs)
 }
 
-func (o *Browser) Browse() {
+func (o *Browser) Browse() error {
 	var flags C.DNSServiceFlags = 0
 
 	registrationType := C.CString(o.RegistrationType)
@@ -82,6 +84,8 @@ func (o *Browser) Browse() {
 	domain := C.CString(o.Domain)
 	defer C.free(unsafe.Pointer(domain))
 
+	log.Println("Browse() called")
+	stateIndex := callbackState.Add(o)
 	errorCode := C.DNSServiceBrowse(
 		&o.Service,
 		flags,
@@ -89,9 +93,9 @@ func (o *Browser) Browse() {
 		registrationType,
 		nil,
 		C.DNSServiceBrowseReply(C.browseCallback),
-		unsafe.Pointer(o),
+		unsafe.Pointer(&stateIndex),
 	)
-	fmt.Println("Browse done. error code:", errorCode)
+	log.Println("Browse done. error code:", errorCode)
 
 	if errorCode == C.kDNSServiceErr_NoError {
 		// srv := unsafe.Pointer(o.Service)
@@ -102,18 +106,19 @@ func (o *Browser) Browse() {
 		// fmt.Println(file)
 		go func() {
 			// bb := make([]byte, 100)
-			fmt.Println("entering loop")
 			for {
-				fmt.Println("in loop")
 				// n, err := file.Read(bb)
 				// if n == 0 && err == io.EOF {
 				// 	fmt.Println("EOF")
 				// } else {
 				// fmt.Println("printing", string(bb))
 				errorCode = C.DNSServiceProcessResult(o.Service)
-				fmt.Println("process", errorCode)
+				log.Println("browse process", errorCode)
 				// }
 			}
 		}()
+		return nil
 	}
+
+	return errors.New("unknown error")
 }

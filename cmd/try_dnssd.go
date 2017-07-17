@@ -14,6 +14,7 @@ func main() {
 	// }
 	// r := st_dnssd.Registration{RegistrationType: "_go._tcp", Port: 56565, Callback: rCallback}
 	// r.RegisterService([]string{"version=1", "base=2"})
+	// r.RegisterService(nil)
 
 	// fmt.Println("length", r.TextRecordLength())
 
@@ -32,7 +33,7 @@ func main() {
 		// 	Callback: rCallback,
 		// }
 		if !args.FlagIsMoreComing() {
-			st_dnssd.Resolve(args.IfIndex, args.ServiceName, args.RegistrationType, args.ReplyDomain, rCallback)
+			st_dnssd.Resolve(args.IfIndex, args.ServiceName, args.RegistrationType, args.Domain, rCallback)
 		}
 	}
 	b := st_dnssd.Browser{RegistrationType: "_go._tcp", Callback: bCallback}
